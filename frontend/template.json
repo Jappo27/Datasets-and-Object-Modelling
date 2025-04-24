@@ -1,0 +1,43 @@
+{
+    "objects": [
+      {
+        "filename":"",
+        "primative":"",
+        "pos": [0,0,0], 
+        "rot": [0,0,0],
+        "sca": [0,0,0]
+      }
+    ],
+    "light_sources":[
+      { 
+        "type": "",
+        "pos": [0,0,0],
+        "rot": [0,0,0], 
+        "energy": 1,
+        "color": [0,0,0]
+      }
+    ],
+    "camera_poses": [
+      [[0,0,0], [0,0,0]]
+    ],
+    "random": {
+      "pivot": ["x", "z", "y"],
+      "environment": ["angle", "background"],
+      "objects": {
+        "pos": ["x", "y", "z"],
+        "sca": ["width", "height", "length"]
+      }
+    },
+  
+    "render": [
+      {
+        "renders": 1,
+        "degree": [1,1,1]
+      }
+    ],
+    "render_res": [256,256],
+    "background_color": [0,0,0],
+    "seed": 0
+}
+
+

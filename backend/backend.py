@@ -1,14 +1,10 @@
 """The main backend file which deals with rendering."""
 
 # import blenderproc as bproc
-import numpy as np
-import random
-import json
-import os
-import shutil
 from copy import deepcopy
-import subprocess
-import multiprocessing
+import sys, random, json, os, shutil, subprocess, multiprocessing
+import numpy as np
+
 
 # initialise config - will hold the config ready for export
 config = { 
@@ -75,7 +71,7 @@ class Backend():
                     o.set_rotation(obj["rot"])
                     o.set_scale(obj["sca"])
 
-            if ("light_sources" in temp):
+            if ("light_sources" in temp and temp["light_sources"].get("type")):
                 # for now there is only one light which can be on the scene
                 l = self.RenderLight(temp["light_sources"]["type"], temp["light_sources"]["name"])
 
@@ -132,12 +128,15 @@ class Backend():
             "renders": 1,
             "degree": [0,0,0]
         }
+
         config["render_folder"] = "output/"
+        
         path = config["render_folder"] 
-
         if (not os.path.exists(path)):
-            os.mkdir("output/") 
-
+            try:
+                os.mkdir("output/") 
+            except:
+                pass
 
         config["render_res"] = (256,256)
 
@@ -162,6 +161,7 @@ class Backend():
         
         :param seed: int value indicating random seed"""
         config["seed"] = seed
+        random.seed(seed)
 
         Backend.update_log(f'Seed changed to: {seed}\n')
 
@@ -179,8 +179,6 @@ class Backend():
         :param angles: a list containing x y and z angle change"""
         config["render"]["degree"] = angles
 
-    # REPOSITION THESE FUNCTIONS 
-    #
     def toggle_random_mode(self, mode):
         """
         Toggles the random mode in config.
@@ -208,15 +206,14 @@ class Backend():
             except:
                 config["random"]["objects"][index][category][field] = [0,0]
             # try apply this change
-            self.apply_specific_random_limit(index, category, field)
+            if (config["random"]["mode"] == "set"):
+                self.apply_specific_random_limit(index, category, field)
         else:
             # check this logic again
             # remove field from config if it exists
             if field in config["random"]["objects"][index][category]:
                 del config["random"]["objects"][index][category][field]
         
-        # Backend.update_log(f'Random attribute {field} set to {state}\n')
-    #
     
     def apply_specific_random_limit(self, index, category, field):
         """Applies the specific limits"""
@@ -225,7 +222,6 @@ class Backend():
             upper_bound = float(config["random"]["objects"][index][category][field][1])
             
             random_value = random.uniform(lower_bound, upper_bound)
-            # print(f"object {index} - {category} - {field}: {random_value}")
             self.update_appropriate_cfg(index, category, field, random_value)
         except:
             pass
@@ -233,8 +229,6 @@ class Backend():
     # this should be called for when its generating PER render
     def apply_all_random_limits(self):
         """Applies the limits at the per render mode"""
-        # will be chcanged to obj, cat, attributes later
-        print(config["random"]["objects"].items())
         try:
             for obj_index, categories in config["random"]["objects"].items():
                 for category, attributes in categories.items():  # Iterate over categories (e.g., 'render', 'pivot')
@@ -246,7 +240,6 @@ class Backend():
 
                             # Generate a random value within bounds
                             random_value = random.uniform(lower_bound, upper_bound)
-                            print(f"Object {obj_index} - {category} - {attr}: {random_value}")
                             
                             # apply this field
                             self.apply_specific_random_limit(obj_index, category, attr)
@@ -257,8 +250,7 @@ class Backend():
         
         except Exception as e:
             print(f"Error processing config['random']['objects']: {e}")
-    #
-    #
+   
     def update_appropriate_cfg(self, index, category, field, random_value): 
         """
         Updates the config file based on the specific index, category and field.
@@ -369,9 +361,9 @@ class Backend():
             case "Z":
                 config["light_sources"]["pos"][2] = random_value
                 
-            case "Pitch":
-                config["light_sources"]["rot"][0] = random_value
             case "Roll":
+                config["light_sources"]["rot"][0] = random_value
+            case "Pitch":
                 config["light_sources"]["rot"][1] = random_value
             case "Yaw":
                 config["light_sources"]["rot"][2] = random_value 
@@ -380,11 +372,6 @@ class Backend():
                 config["light_sources"]["energy"] = random_value
             case "Radius":
                 config["light_sources"]["radius"] = random_value
-            case "Colour":
-                # THIS NEEDS CHANGED SINCE ITS A HEXCODE
-                # config["light_sources"]["color"] = '#ffffff'
-                # config["light_sources"]["color"] = random_value  
-                pass
             
             case _:
                 raise ValueError(f"Unrecognized field: {field}")
@@ -402,9 +389,9 @@ class Backend():
                 config["objects"][index]["pos"][2] = random_value
             
             # assumes pitch is Y, roll is X and yaw is Z
-            case "Pitch":
-                config["objects"][index]["rot"][0] = random_value
             case "Roll":
+                config["objects"][index]["rot"][0] = random_value
+            case "Pitch":
                 config["objects"][index]["rot"][1] = random_value
             case "Yaw":
                 config["objects"][index]["rot"][2] = random_value
@@ -412,9 +399,9 @@ class Backend():
             # assumes width is x height is y and length is z and is in form xyz
             case "Width":
                 config["objects"][index]["sca"][0] = random_value
-            case "Height":
-                config["objects"][index]["sca"][1] = random_value
             case "Length":
+                config["objects"][index]["sca"][1] = random_value
+            case "Height":
                 config["objects"][index]["sca"][2] = random_value
             
             case _:
@@ -425,11 +412,9 @@ class Backend():
     def toggle_object(self, object, state):
         if state:
             if object.hidden: 
-                #config['objects'].append(object)
                 object.add_object()
         else:
             if not object.hidden:
-                #config['objects'].remove(object)
                 object.remove_object()
     
     def ground_object(self, object, state):
@@ -493,7 +478,7 @@ class Backend():
         x_position = r * np.sin( angle[2] )    #calculate x and y positions based on y angle
         y_position = -1 * r * np.cos( angle[2] )
 
-        z_position = np.cos(angle[0]) * distance #caluclate z angle based on x positions
+        z_position = np.cos(angle[0]) * distance #calculate z angle based on x positions
 
         position = [x_position, y_position, z_position]
         return position
@@ -511,7 +496,7 @@ class Backend():
 
         number_of_renders = config["render"]["renders"]
 
-        starting_x_angle = np.pi / 2 #No place in UI to set starting camera angle 
+        starting_x_angle = np.pi / 2
         starting_y_angle = 0
         starting_z_angle = 0
 
@@ -566,68 +551,56 @@ class Backend():
 
         config["camera_poses"] = []
 
-    def set_runtime_config(self, config):
-        self.runtime_config = config
+    def set_runtime_config(self, run_config):
+        self.runtime_config = run_config
 
+    def set_config(self, new_config):
+        config = new_config
 
-    def render(self, objects, headless = False, preview = False, viewport_temp = False, config = config):
+    def render(self, objects, headless = False, preview = False, viewport_temp = False):
         """Renders the scene and saves to file in the output folder."""
-
-        # We need to take 
 
         if not viewport_temp: Backend.update_log(f'Rendering Started\n')
         else: Backend.update_log(f'Viewport Preview Render Started\n')
 
-        
-        origConfig = deepcopy(config)
-        origObjects = []
-
-        for obj in objects.items:
-            origObjects.append(deepcopy(obj.properties))
-            #self.add_object_properties(obj)
 
         self.add_camera_poses(viewport_temp)
 
 
-        with open("backend\\temp_export.json", "w") as export_file:
+        with open("backend/temp_export.json", "w") as export_file:
             json.dump(self.runtime_config, export_file)
 
         # Create a temporary file for the blender environment and call it
-        path = os.path.abspath(os.getcwd()) + "\\backend"
+        path = os.path.abspath(os.getcwd()) + "/backend"
+        if (sys.platform == 'win32'):
+            path = path.replace("\\", "/")
         file_contents = ""
 
-        with open(path + "\\backend.py", "r") as this_file:
+        with open(path + "/backend.py", "r") as this_file:
             file_contents = this_file.read()
 
-        with open(path + "\\_temp.py", "w") as to_run:
-            path = path.replace("\\", "\\\\")
-            to_run.write("import blenderproc as bproc\n" + file_contents + f"""Backend("{path}\\\\temp_export.json")._render({viewport_temp})""")
+        with open(path + "/_temp.py", "w") as to_run:
+            to_run.write("import blenderproc as bproc\n" + file_contents + f"""Backend("{path}/temp_export.json")._render({viewport_temp})""")
 
         os.system("blenderproc run backend/_temp.py")
 
-        highest = self.getHighestInDir()
+        highest = self.get_highest_in_dir()
         num = highest - config["render"]["renders"] + 1
-        print(highest)
-        print(num)
 
         if (viewport_temp):
             os.system("blenderproc vis hdf5 viewport_temp/0.hdf5 --save viewport_temp")
-        elif (not headless and preview): # Doesnt work anymore / could just bin off preview though
+        elif (not headless and preview):
             os.system("blenderproc vis hdf5 output/0.hdf5")
         elif (not headless):
             images = []
             for i in range(config["render"]["renders"]):
                 hdf5_file = f"{config['render_folder']}/{i + num}.hdf5"
+                if (i > 10): break
                 image = multiprocessing.Process(target=subprocess.run, args=(["blenderproc", "vis", "hdf5", hdf5_file],))
                 images.append(image)
                 image.start()
 
-            if (len(images) < 50): # so a PC doesn't explode
-                for image in images:
-                    image.join()
-
         self.remove_camera_poses()
-        config = origConfig
 
         '''for i in range(len(objects.items)):
             obj.properties = origObjects[i]'''
@@ -656,7 +629,7 @@ class Backend():
         else:
             bproc.writer.write_hdf5(config["render_folder"], data, append_to_existing_output = True)
 
-    def getHighestInDir(self):
+    def get_highest_in_dir(self):
         highest = -1
         for file in os.listdir(config["render_folder"]):
             if file.endswith(".hdf5"):
@@ -671,20 +644,8 @@ class Backend():
                         highest = int(num)
                 except:
                     pass
-        return highest
-
-    def export(self, path, filename="export.json"):
-        """Exports the current scene setup to a JSON file.
-        
-        :param filename: The filename of the exported config, defaults to export.json."
-        """
-        config["render_folder"] = ""
-        file_path = path + "/" + filename
-        with open(file_path, "w") as export_file:
-            json.dump(config, export_file, indent = 2)
-
-        Backend.update_log(f'Settings exported\n')
-
+        return 0 if highest == -1 else highest
+    
     def export_interaction(self, path, filename="interaction_log.txt"):
         """Exports the current interaction log.
         
@@ -694,6 +655,17 @@ class Backend():
         shutil.copyfile(filename, file_path)
 
         Backend.update_log(f'Interaction exported\n')
+
+    def export(self, path, filename="export.json"):
+        """Exports the current scene setup to a JSON file.
+        
+        :param filename: The filename of the exported config, defaults to export.json."
+        """
+        file_path = path + "/" + filename
+        with open(file_path, "w") as export_file:
+            json.dump(config, export_file, indent = 2)
+
+        Backend.update_log(f'Settings exported\n')
 
     @staticmethod
     def update_log(interaction):
@@ -817,8 +789,6 @@ class Backend():
             Backend.update_log(f'{self.__str__()} object added to the scene\n')
 
 
-        #! TODO: Think of and implement more object manipulation methods
-
     class RenderLight():
         """Render a light source."""
 
@@ -840,7 +810,7 @@ class Backend():
                 "name": name,
                 "pos": [0, 0, 0],
                 "rot": [0, 0, 0],
-                "energy": 10,
+                "energy": 0,
                 "color": [255, 255, 255],
                 "radius": 0
             }
@@ -849,7 +819,6 @@ class Backend():
             return f"Light Source {self.light_pos + 1}"
 
         def set_type(self, type):
-            #print(config)
             if (is_blender_environment):
                 self.light.set_type(type)
 
@@ -858,7 +827,6 @@ class Backend():
             Backend.update_log(f'Type of {self.__str__()} changed to {type}\n')
 
         def set_radius(self, radius):
-            #print(radius)
             if (is_blender_environment):
                 self.light.set_radius(radius)
 
@@ -871,7 +839,6 @@ class Backend():
             
             :param location: A list containing [x,y,z] where x,y,z is an integer or float. This determines the coordinates of the light's location.
             """
-            #print("location changed")
             if (is_blender_environment):
                 self.light.set_location(location)
 
@@ -884,7 +851,6 @@ class Backend():
 
             :param rotation: A list [x,y,z] with values for the rotation to be applied to the light.
             """
-            #print("angle changed")
             rotRad = []
             for x in rotation:
                 rotRad.append(np.deg2rad(int(x)))
@@ -902,7 +868,6 @@ class Backend():
             
             :param energy: The energy to set it as. Interpreted as watts.
             """
-            #print("energy changed")
             if (is_blender_environment):
                 self.light.set_energy(energy)
 
@@ -917,11 +882,6 @@ class Backend():
             :param hex_value: The hex string, describing rgb.
             :return: The rgba color, in form of a list. Values between 0 and 1.
 
-            THIS HAS BEEN BORROWED PERMENETLY FROM THE BPROC SOURCE CODE!
-            I COULDN'T FIGURE OUT HOW TO CALL IT
-            SOMEONE FIX IF YOU WANT TO
-            OR WE REFERENCE
-            :SHRUG:
             """
             try:
                 return [x / 255 for x in bytes.fromhex(hex_value[-6:])]
@@ -933,11 +893,8 @@ class Backend():
             
             :param color: A list [r,g,b] containing the values of the red, green and blue attributes from 0 to 255 inclusive.
             """
-            print(color)
             colour = self.hex_to_rgba(color)
-            #print(colour)
             if (is_blender_environment):
-                print(colour)
                 self.light.set_color(colour)
 
             config["light_sources"]["color"] = color

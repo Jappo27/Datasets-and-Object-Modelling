@@ -90,7 +90,7 @@ def ObjectTabTests(tab_widget, shared_state, ObjectTab):
             
             #Updates Field Value
             ObjectTab.Slider_Update_Scale(ObjectTab, 5450, Field)
-            TestPrint(f"Expected 100:", Field.text() == "100")
+            TestPrint(f"Expected 100:", Field.text() == "100.0")
             
             """#Updates slider position
             ObjectTab.Update_slider(ObjectTab, Slider, 5450)
@@ -108,7 +108,7 @@ def ObjectTabTests(tab_widget, shared_state, ObjectTab):
             TestPrint(f"Expected 0.0:", Field.text() == "0.0")
             
             ObjectTab.Slider_Update_Scale(ObjectTab, 5450, Field)
-            TestPrint(f"Expected 100:", Field.text() == "100")
+            TestPrint(f"Expected 100:", Field.text() == "100.0")
             
             """#Updates slider position
             ObjectTab.Update_slider(ObjectTab, Slider, 5450)
@@ -164,12 +164,12 @@ def PivotTabTests(tab_widget, shared_state, PivotTab):
 
 def RenderTabTests(tab_widget, shared_state, RenderTab):
         TestPrint("---Render Tab Check")
-        Page = tab_widget.widget(1).layout()
+        Page = tab_widget.widget(2).layout()
 
         s = 0
 
-        ButtonFields = [[1, 1]]
-        Slider_Fields = [[1, 3], [1, 4], [1, 5]]
+        ButtonFields = [[1, 0]]
+        Slider_Fields = [[1, 4], [2, 4], [3, 4]]
     
         for i in range(len(ButtonFields)):
             TestPrint(f"{s}---Render Tab Button Check")
@@ -180,18 +180,19 @@ def RenderTabTests(tab_widget, shared_state, RenderTab):
             #Error Checking on MinusButton
             Field.setText("OYJ")
             MinusButton.click()
-            TestPrint(f"Expected 0.0:", Field.text() == "0.0")
+            TestPrint(f"Expected 1:", Field.text() == "1")
             
             #Error Checking on PlusButton
             Field.setText("OYJ")
             PlusButton.click()
-            TestPrint(f"Expected 0.0:", Field.text() == "0.0")
+            TestPrint(f"Expected 1:", Field.text() == "1")
             
             #Checking Buttons Alter values
+            Field.setText("10")
             MinusButton.click()
-            TestPrint(f"Expected -1.0:", Field.text() == "-1.0")
+            TestPrint(f"Expected 9:", Field.text() == "9")
             PlusButton.click()
-            TestPrint(f"Expected 0.0:", Field.text() == "0.0")
+            TestPrint(f"Expected 10:", Field.text() == "10")
 
         TestPrint(f"{s}---Render Tab Slider Check")
         for i in range(len(Slider_Fields)):
@@ -297,8 +298,8 @@ def RandomTabPageTests(tab_widget, PagePos):
         TestPrint("---Illegal Value")
         PageLayout.itemAtPosition(y, x+1).widget().setText("OYJ")
         PageLayout.itemAtPosition(y, x+1).widget().editingFinished.emit()
-        TestPrint("Expected -inf:", PageLayout.itemAtPosition(y, x+1).widget().text() == "-inf")
-        TestPrint("Expected inf:", PageLayout.itemAtPosition(y, x+2).widget().text() == "inf")
+        TestPrint("Expected 0:", PageLayout.itemAtPosition(y, x+1).widget().text() == "0")
+        TestPrint("Expected 0:", PageLayout.itemAtPosition(y, x+2).widget().text() == "0")
 
         TestPrint("---LowerBound Value > UpperBound Value")
         PageLayout.itemAtPosition(y, x+1).widget().setText("1")
